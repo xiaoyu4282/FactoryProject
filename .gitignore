@@ -1,0 +1,17 @@
+# Python虚拟环境
+venv/
+
+# 模型权重文件夹
+Weights/
+
+# python缓存
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE
+.vscode/
+.idea/
+
+#日志
+*.log
