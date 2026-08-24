@@ -1,3 +1,5 @@
+# 识别视频中的人、并框起来，没推理的帧，继续显示上一次带框的画面
+
 from ultralytics import YOLOWorld
 import cv2
 
