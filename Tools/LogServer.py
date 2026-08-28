@@ -3,10 +3,12 @@ import csv
 from datetime import datetime
 import cv2
 
-# 配置，外部主程序也可以覆盖
-LOG_FOLDER = r"D:\Work\Project\FactoryProject\alert_log"
+# =========修改：改成相对路径，不要写死D盘========
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOG_FOLDER = os.path.join(BASE_DIR, "alert_log")
 CSV_PATH = os.path.join(LOG_FOLDER, "alert_record.csv")
 SNAP_FOLDER = os.path.join(LOG_FOLDER, "alert_snap")
+
 
 # 初始化文件夹、csv表头
 def init_log_env():
@@ -29,6 +31,7 @@ def init_log_env():
         with open(CSV_PATH, mode="w", encoding="utf-8-sig", newline="") as f:
             w = csv.writer(f)
             w.writerow(header)
+
 
 def save_alert_log(alert_seq:int, alert_type:str, desc:str, person_cnt:int, conf:float, cam_id:str, frame_image):
     """
@@ -65,3 +68,7 @@ def save_alert_log(alert_seq:int, alert_type:str, desc:str, person_cnt:int, conf
         w.writerow(row)
 
     print(f"[日志模块] 告警{alert_seq}已写入，截图：{snap_filename}")
+
+
+# 关键：导入模块的时候自动初始化文件夹！！
+init_log_env()
