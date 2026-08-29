@@ -13,7 +13,7 @@ from datetime import datetime
 # --------------------------配置区
 DINGDING_WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=5806c8e908d20c707ca3d8a729bf54af17cb098673828b43ef0d49c53ce159c0"
 # RKNN配置
-RKNN_MODEL_PATH = "./Weights/yolov8s-fp16.rknn"
+RKNN_MODEL_PATH = "./Weights/yolov8s-worldv2.rknn"
 INPUT_SIZE = (640, 640)
 conf_threshold = 0.35
 frame_gap = 20
