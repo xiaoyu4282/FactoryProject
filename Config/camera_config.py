@@ -14,7 +14,7 @@
 """
 from dataclasses import dataclass, field
 from typing import Optional
-
+from typing  import List
 
 @dataclass
 class CameraConfig:
@@ -26,11 +26,11 @@ class CameraConfig:
     resolution: Optional[tuple] = None       # 可选：设置分辨率 (w, h)
     reconnect_delay: float = 2.0             # RTSP 断流重连间隔（秒）
     max_retry: int = 3                       # RTSP 每次断流最多重连次数
-    tasks: list = field(default_factory=lambda: ["person_intrusion"])  # 预留：该路启用的功能
+    tasks: List = field(default_factory=lambda: ["person_intrusion"])  # 预留：该路启用的功能
 
 
 # ==================== 摄像头列表（按需增删） ====================
-CAMERAS: list[CameraConfig] = [
+CAMERAS: List[CameraConfig] = [
     CameraConfig(
         id="camera_0",
         type="usb",
