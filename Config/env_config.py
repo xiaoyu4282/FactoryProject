@@ -13,6 +13,10 @@ from dataclasses import dataclass, field
 ENV = "box"      # 可选: "laptop" | "box"
 # ===========================================================
 
+# ==================== 通用通知配置 ====================
+DINGDING_WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=5806c8e908d20c707ca3d8a729bf54af17cb098673828b43ef0d49c53ce159c0"
+# ======================================================
+
 
 # ---------------- 笔记本环境（调用 .pt 大模型 / GPU）----------------
 @dataclass
@@ -26,6 +30,7 @@ class LaptopEnvConfig:
     class_names: list = field(default_factory=lambda: ["person"])  # world模型自定义类别
     device: str = ""                            # ultralytics 设备，""=自动(cuda优先)
     target_class: str = "person"                # 业务关注的类别
+    dingding_webhook: str = DINGDING_WEBHOOK    # 钉钉机器人地址
     # ---------- 笔记本专属功能开关（盒子环境自动关闭） ----------
     show_window: bool = True                    # 弹出视频窗口
     voice_alert: bool = True                    # 本地语音播报
@@ -54,6 +59,7 @@ class BoxEnvConfig:
     ])
     device: str = ""
     target_class: str = "person"
+    dingding_webhook: str = DINGDING_WEBHOOK    # 钉钉机器人地址
     # ---------- 盒子环境：关闭笔记本专属功能 ----------
     show_window: bool = False                   # 盒子无显示器，不弹窗口
     voice_alert: bool = False                   # 盒子不本地播报

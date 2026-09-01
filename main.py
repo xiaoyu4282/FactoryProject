@@ -6,39 +6,33 @@
 
   视频数据源 : Config/camera_config.py 配置  ->  VideoSource/(USB/RTSP) 实现
   推理后端   : Config/env_config.py   配置  ->  Detector/(torch/rknn)  实现
-  业务逻辑   : 本文件，只依赖上面两层提供的统一接口
+    公共能力   : Tools/ 提供钉钉、日志、语音服务
+    业务功能   : Features/ 按功能独立迭代
 
 环境切换   : 改 Config/env_config.py 里的 ENV（"laptop"=笔记本大模型 / "box"=RK3588盒子NPU）
 新增摄像头 : 在 Config/camera_config.py 的 CAMERAS 列表加一行即可，业务代码不用动
 """
-import csv
-import json
-import os
 import signal
 import threading
 import time
-from datetime import datetime
 
 import cv2
-import requests
 
 from Config import camera_config, env_config
 from Detector.factory import create_detector
+from Tools.DingTalkService import DingTalkService
+from Tools.LogServer import save_alert_log
+from Tools.NotifyService import speak_alert
 from VideoSource.factory import create_sources
 
 # ============================== 业务配置 ==============================
-DINGDING_WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=5806c8e908d20c707ca3d8a729bf54af17cb098673828b43ef0d49c53ce159c0"
-
-LOG_DIR = "./Logs"
-IMAGE_DIR = os.path.join(LOG_DIR, "Images")
-CSV_FILE = os.path.join(LOG_DIR, "LogInfoRecord.csv")
-
 frame_gap = 20          # 每隔 N 帧做一次推理
 alert_cooldown = 10     # 告警冷却（秒）
 
 # ============================== 加载环境配置 ==============================
 env_cfg = env_config.get_env_config()
 print(f"当前环境: {env_cfg.env_name}  推理后端: {env_cfg.backend}  模型: {env_cfg.model_path}")
+ding_talk_service = DingTalkService(env_cfg.dingding_webhook)
 
 # ============================== 创建视频源（USB/RTSP） ==============================
 sources = create_sources(camera_config.CAMERAS)
@@ -66,67 +60,6 @@ def sigint_handler(signum, frame):
     cleanup_all()
     exit(0)
 signal.signal(signal.SIGINT, sigint_handler)
-
-# ============================== 日志初始化 ==============================
-os.makedirs(LOG_DIR, exist_ok=True)
-os.makedirs(IMAGE_DIR, exist_ok=True)
-
-if not os.path.exists(CSV_FILE):
-    with open(CSV_FILE, "w", encoding="utf-8-sig", newline="") as f:
-        csv.writer(f).writerow([
-            "alert_seq", "alert_time", "alert_type", "desc",
-            "person_cnt", "conf", "cam_id", "image_path"
-        ])
-
-def save_alert_log(alert_seq, alert_type, desc, person_cnt, conf, cam_id, frame_image):
-    """保存告警截图 + 写入 csv 日志"""
-    now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    img_name = f"alert_{alert_seq}_{now_str}.jpg"
-    img_full_path = os.path.join(IMAGE_DIR, img_name)
-    cv2.imwrite(img_full_path, frame_image)
-    rel_img_path = os.path.join("Images", img_name)
-    with open(CSV_FILE, "a", encoding="utf-8-sig", newline="") as f:
-        csv.writer(f).writerow([
-            alert_seq,
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            alert_type,
-            desc,
-            person_cnt,
-            round(conf, 4),
-            cam_id,
-            rel_img_path
-        ])
-    print(f"📝日志已保存，截图:{img_full_path}")
-
-def send_ding_alert(count_num, cam_id="camera_0"):
-    """发送钉钉告警"""
-    payload = {
-        "msgtype": "text",
-        "text": {
-            "content": f"告警[{cam_id}]: Person intrusion detected! No.{count_num}"
-        }
-    }
-    try:
-        resp = requests.post(
-            DINGDING_WEBHOOK,
-            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-            headers={"Content-Type": "application/json; charset=utf-8"},
-            timeout=5
-        )
-        print("【钉钉回执】", resp.text)
-    except Exception as e:
-        print("钉钉发送异常：", e)
-
-def speak_alert():
-    """本地语音播报（仅笔记本使用；惰性导入 pyttsx3，盒子环境不会缺包报错）"""
-    try:
-        import pyttsx3
-        tts = pyttsx3.init()
-        tts.say("警告，检测到人员闯入")
-        tts.runAndWait()
-        tts.stop()
-    except Exception as e:
-        print("语音播报异常：", e)
 
 # ============================== 业务主循环（多路摄像头） ==============================
 # 每路摄像头独立维护状态，互不干扰
@@ -190,7 +123,7 @@ try:
                 st["alert_count"] += 1
                 st["last_alert_time"] = now
                 print(f"====[{src.source_id}] 触发第{st['alert_count']}次告警====")
-                send_ding_alert(st["alert_count"], src.source_id)
+                ding_talk_service.send_alert(st["alert_count"], src.source_id)
 
                 # 笔记本专属：本地语音播报（子线程，不阻塞主循环；盒子环境自动跳过）
                 if env_cfg.voice_alert:
