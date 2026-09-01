@@ -6,8 +6,9 @@
 
   视频数据源 : Config/camera_config.py 配置  ->  VideoSource/(USB/RTSP) 实现
   推理后端   : Config/env_config.py   配置  ->  Detector/(torch/rknn)  实现
-    公共能力   : Tools/ 提供钉钉、日志、语音服务
-    业务功能   : Features/ 按功能独立迭代
+  公共能力   : Tools/ 提供钉钉、日志、语音服务
+  Web 页面   : Web/ 提供实时视频流 + 前端页面
+  业务功能   : Features/ 按功能独立迭代
 
 环境切换   : 改 Config/env_config.py 里的 ENV（"laptop"=笔记本大模型 / "box"=RK3588盒子NPU）
 新增摄像头 : 在 Config/camera_config.py 的 CAMERAS 列表加一行即可，业务代码不用动
@@ -24,6 +25,8 @@ from Tools.DingTalkService import DingTalkService
 from Tools.LogServer import save_alert_log
 from Tools.NotifyService import speak_alert
 from VideoSource.factory import create_sources
+from Web.frame_buffer import FrameBuffer
+from Web.web_server import start_web_server
 
 # ============================== 业务配置 ==============================
 frame_gap = 20          # 每隔 N 帧做一次推理
@@ -47,12 +50,22 @@ if not sources:
 # ============================== 创建推理后端（torch/rknn） ==============================
 detector = create_detector(env_cfg)
 
+# ============================== 启动 Web 服务（实时视频页面） ==============================
+frame_buffer = FrameBuffer()
+if env_cfg.enable_web:
+    start_web_server(
+        frame_buffer,
+        cam_ids=[src.source_id for src in sources],
+        host=env_cfg.web_host,
+        port=env_cfg.web_port,
+    )
+
 # ============================== 退出清理 ==============================
 def cleanup_all():
     for src in sources:
         src.release()
     detector.release()
-    if env_cfg.show_window:
+    if env_cfg.show_window and not env_cfg.enable_web:
         cv2.destroyAllWindows()
 
 def sigint_handler(signum, frame):
@@ -117,6 +130,10 @@ try:
                 if st["last_draw"] is not None:
                     draw_frame = st["last_draw"]
 
+            # ---------- 推送到 Web（每帧都推，保证视频流畅；盒子环境同样可用） ----------
+            if env_cfg.enable_web:
+                frame_buffer.put(src.source_id, draw_frame)
+
             # ---------- 告警（每路独立冷却） ----------
             now = time.time()
             if st["has_person"] and (now - st["last_alert_time"] > alert_cooldown):
@@ -139,8 +156,8 @@ try:
                     frame_image=draw_frame,
                 )
 
-            # ---------- 笔记本专属：弹出视频窗口（盒子环境自动跳过） ----------
-            if env_cfg.show_window:
+            # ---------- 笔记本专属：弹出视频窗口（盒子环境 / 启动 Web 后自动跳过） ----------
+            if env_cfg.show_window and not env_cfg.enable_web:
                 cv2.imshow(src.source_id, draw_frame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     print("收到按键 q，退出...")

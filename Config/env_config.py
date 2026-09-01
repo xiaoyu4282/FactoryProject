@@ -10,7 +10,7 @@
 from dataclasses import dataclass, field
 
 # ==================== 在这里切换运行环境 ====================
-ENV = "box"      # 可选: "laptop" | "box"
+ENV = "laptop"      # 可选: "laptop" | "box"
 # ===========================================================
 
 # ==================== 通用通知配置 ====================
@@ -34,6 +34,10 @@ class LaptopEnvConfig:
     # ---------- 笔记本专属功能开关（盒子环境自动关闭） ----------
     show_window: bool = True                    # 弹出视频窗口
     voice_alert: bool = True                    # 本地语音播报
+    # ---------- Web 服务 ----------
+    enable_web: bool = True                     # 启动 Web 实时视频页面
+    web_host: str = "0.0.0.0"                   # 监听地址（0.0.0.0=局域网可访问）
+    web_port: int = 8000                        # 端口
 
 
 # ---------------- RK3588 盒子环境（调用 .rknn 模型 / NPU）----------------
@@ -63,6 +67,10 @@ class BoxEnvConfig:
     # ---------- 盒子环境：关闭笔记本专属功能 ----------
     show_window: bool = False                   # 盒子无显示器，不弹窗口
     voice_alert: bool = False                   # 盒子不本地播报
+    # ---------- Web 服务 ----------
+    enable_web: bool = True                     # 启动 Web 实时视频页面（局域网查看/配置）
+    web_host: str = "0.0.0.0"
+    web_port: int = 8000
 
 
 _ENV_CONFIGS = {
