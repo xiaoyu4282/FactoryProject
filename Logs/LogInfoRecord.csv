@@ -2,3 +2,13 @@
 1,2026-08-24 23:46:58,person_intrusion,检测到人员闯入,1,0.35,camera_0,Images\alert_1_20260824_234658.jpg
 2,2026-08-24 23:47:08,person_intrusion,检测到人员闯入,1,0.35,camera_0,Images\alert_2_20260824_234708.jpg
 3,2026-08-24 23:47:18,person_intrusion,检测到人员闯入,1,0.35,camera_0,Images\alert_3_20260824_234718.jpg
+1,2026-08-31 22:57:29,person_intrusion,检测到人员闯入,1,0.7953,camera_0,Images\alert_1_20260831_225729.jpg
+2,2026-08-31 22:57:39,person_intrusion,检测到人员闯入,1,0.8358,camera_0,Images\alert_2_20260831_225739.jpg
+1,2026-08-31 23:04:03,person_intrusion,检测到人员闯入,1,0.7048,camera_0,Images\alert_1_20260831_230403.jpg
+2,2026-08-31 23:04:13,person_intrusion,检测到人员闯入,1,0.7183,camera_0,Images\alert_2_20260831_230413.jpg
+3,2026-08-31 23:04:23,person_intrusion,检测到人员闯入,1,0.8337,camera_0,Images\alert_3_20260831_230423.jpg
+1,2026-09-01 21:22:50,person_intrusion,检测到人员闯入,1,0.9206,camera_0,Images\alert_1_20260901_212250.jpg
+2,2026-09-01 21:23:00,person_intrusion,检测到人员闯入,1,0.9232,camera_0,Images\alert_2_20260901_212300.jpg
+1,2026-09-01 21:45:10,person_intrusion,检测到人员闯入,1,0.9123,camera_0,Images\alert_1_20260901_214510.jpg
+2,2026-09-01 21:45:20,person_intrusion,检测到人员闯入,1,0.7301,camera_0,Images\alert_2_20260901_214520.jpg
+3,2026-09-01 21:45:30,person_intrusion,检测到人员闯入,1,0.927,camera_0,Images\alert_3_20260901_214530.jpg
