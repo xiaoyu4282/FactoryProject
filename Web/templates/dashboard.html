@@ -53,8 +53,10 @@
     }
     main {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+      grid-template-columns: minmax(0, 1.5fr);
       gap: 18px;
+      max-width: 1500px;
+      margin: 0 auto;
     }
     .card {
       background: var(--panel);
@@ -82,19 +84,65 @@
     }
     .card .head .status.live { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
     .card .video-wrap {
-      aspect-ratio: 16 / 9;
+      position: relative;
+      width: 100%;
+      min-height: 620px;
       background: #000;
       display: flex;
       align-items: center;
       justify-content: center;
       color: var(--muted);
       font-size: 14px;
+      overflow: hidden;
+      cursor: crosshair;
+    }
+    .card .video-stage {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 620px;
     }
     .card img {
       width: 100%;
       height: 100%;
       object-fit: contain;
       display: block;
+      background: #000;
+    }
+    .roi-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: auto;
+      background: transparent;
+      z-index: 2;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px 16px;
+      border-top: 1px solid var(--border);
+      background: rgba(255,255,255,0.01);
+    }
+    .toolbar button {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+      padding: 7px 12px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .toolbar button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .toolbar .hint {
+      color: var(--muted);
+      font-size: 12px;
+      margin-left: auto;
     }
     .empty {
       text-align: center;
@@ -123,12 +171,126 @@
           <span class="status" id="dot-${camId}"></span>
         </div>
         <div class="video-wrap">
-          <img id="img-${camId}" src="/video_feed/${camId}" alt="${camId}">
+          <div class="video-stage">
+            <img id="img-${camId}" src="/video_feed/${camId}" alt="${camId}">
+            <canvas class="roi-canvas" id="canvas-${camId}" width="1280" height="720"></canvas>
+          </div>
+        </div>
+        <div class="toolbar">
+          <button type="button" data-cam="${camId}" data-action="toggle">绘制区域</button>
+          <button type="button" data-cam="${camId}" data-action="clear">清空区域</button>
+          <span class="hint" id="hint-${camId}">已绘制: 0 个区域</span>
         </div>`;
       grid.appendChild(card);
 
       const img = card.querySelector("img");
       const dot = card.querySelector(".status");
+      const canvas = card.querySelector("canvas");
+      const hint = card.querySelector(".hint");
+      const toggleBtn = card.querySelector("button[data-action='toggle']");
+      const clearBtn = card.querySelector("button[data-action='clear']");
+
+      const roiState = {
+        enabled: false,
+        drawing: false,
+        start: null,
+        rects: []
+      };
+
+      function drawRectangles() {
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = "#f87171";
+        ctx.fillStyle = "rgba(248, 113, 113, 0.18)";
+        ctx.lineWidth = 2;
+
+        roiState.rects.forEach((rect) => {
+          ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+          ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+        });
+
+        if (roiState.drawing && roiState.start) {
+          const current = getCanvasPointFromEvent(window.__roiTempPointer || { x: 0, y: 0 });
+          if (current) {
+            const x = Math.min(roiState.start.x, current.x);
+            const y = Math.min(roiState.start.y, current.y);
+            const w = Math.abs(current.x - roiState.start.x);
+            const h = Math.abs(current.y - roiState.start.y);
+            ctx.fillRect(x, y, w, h);
+            ctx.strokeRect(x, y, w, h);
+          }
+        }
+
+        hint.textContent = `已绘制: ${roiState.rects.length} 个区域`;
+      }
+
+      function getCanvasPointFromEvent(evt) {
+        const rect = canvas.getBoundingClientRect();
+        const x = ((evt.clientX - rect.left) / rect.width) * canvas.width;
+        const y = ((evt.clientY - rect.top) / rect.height) * canvas.height;
+        return { x, y };
+      }
+
+      function handlePointerDown(evt) {
+        if (!roiState.enabled) return;
+        const point = getCanvasPointFromEvent(evt);
+        roiState.drawing = true;
+        roiState.start = point;
+        drawRectangles();
+      }
+
+      function handlePointerMove(evt) {
+        if (!roiState.enabled || !roiState.drawing || !roiState.start) return;
+        window.__roiTempPointer = evt;
+        drawRectangles();
+      }
+
+      function handlePointerUp(evt) {
+        if (!roiState.enabled || !roiState.drawing || !roiState.start) return;
+
+        const end = getCanvasPointFromEvent(evt);
+        const x = Math.min(roiState.start.x, end.x);
+        const y = Math.min(roiState.start.y, end.y);
+        const w = Math.abs(end.x - roiState.start.x);
+        const h = Math.abs(end.y - roiState.start.y);
+
+        if (w > 8 && h > 8) {
+          roiState.rects.push({ x, y, w, h });
+        }
+
+        roiState.drawing = false;
+        roiState.start = null;
+        delete window.__roiTempPointer;
+        drawRectangles();
+      }
+
+      toggleBtn.addEventListener("click", () => {
+        roiState.enabled = !roiState.enabled;
+        canvas.style.pointerEvents = roiState.enabled ? "auto" : "none";
+        toggleBtn.textContent = roiState.enabled ? "结束绘制" : "绘制区域";
+        if (!roiState.enabled) {
+          roiState.drawing = false;
+          roiState.start = null;
+          delete window.__roiTempPointer;
+          drawRectangles();
+        }
+      });
+
+      canvas.style.pointerEvents = "none";
+
+      clearBtn.addEventListener("click", () => {
+        roiState.rects = [];
+        roiState.drawing = false;
+        roiState.start = null;
+        delete window.__roiTempPointer;
+        drawRectangles();
+      });
+
+      canvas.addEventListener("pointerdown", handlePointerDown);
+      canvas.addEventListener("pointermove", handlePointerMove);
+      canvas.addEventListener("pointerup", handlePointerUp);
+      canvas.addEventListener("pointerleave", handlePointerUp);
+
       img.addEventListener("load", () => {
         dot.classList.add("live");
         statusEl.textContent = "运行中";
@@ -137,6 +299,8 @@
       img.addEventListener("error", () => {
         dot.classList.remove("live");
       });
+
+      drawRectangles();
     }
 
     async function loadCameras() {

@@ -30,7 +30,7 @@ from Web.web_server import start_web_server
 
 # ============================== 业务配置 ==============================
 frame_gap = 20          # 每隔 N 帧做一次推理
-alert_cooldown = 10     # 告警冷却（秒）
+alert_cooldown = 60     # 告警冷却（秒）
 
 # ============================== 加载环境配置 ==============================
 env_cfg = env_config.get_env_config()
